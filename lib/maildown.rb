@@ -10,7 +10,7 @@ module Maildown
   class Parser
 
     def initialize html
-      @doc = Nokogiri::HTML(html)
+      @doc = Nokogiri::HTML(html.strip)
       @links = []
     end # initialize
 
@@ -18,15 +18,18 @@ module Maildown
       @result ||= parse
     end
 
-    private
+    # private
 
       def parse
-        @result = @doc.children.map { |ele| parse_element(ele) }.join + "\n\n" + @links.join("\n")
+        @result = @doc.children.map { |ele| parse_element(ele) }.join
+        @result = @result + "\n\n" + @links.join("\n") if @links.any?
+        @result.gsub! /\n{3,}/, "\n\n" # Removes lines breaks where there are more than two.
+        return @result
       end
 
       def parse_element element
         if element.is_a? Nokogiri::XML::Text
-          return "#{element.text}\n"
+          return element.text.strip
         else
           if (children = element.children).count > 0
             return wrap_node(element, children.map {|element| parse_element(element)}.join )
@@ -37,12 +40,12 @@ module Maildown
       end # parse_element
 
       # wrap node with markdown
-      def wrap_node(node,contents=nil)
+      def wrap_node(node, contents=nil)
         result = ''
-        contents.strip! unless contents==nil
+        # contents.strip! unless contents == nil
         # check if there is a custom parse exist
         if respond_to? "parse_#{node.name}"
-          return self.send("parse_#{node.name}",node,contents)
+          return self.send("parse_#{node.name}", node, contents)
         end
         # skip hidden node
         return '' if node['style'] and node['style'] =~ /display:\s*none/
@@ -52,6 +55,8 @@ module Maildown
           result << "*#{contents}*"
         when 'p'
           result << "#{contents}\n\n"
+        when 'br'
+          result << "#{contents}\n"
         when 'script'
         when 'strike'
           result << "--#{contents}--"
@@ -60,7 +65,7 @@ module Maildown
           result << "*#{contents}\n"
         when 'blockquote'
           contents.split('\n').each do |part|
-            result << ">#{contents}\n"
+            result << "> #{part}\n"
           end
         when 'b'
           result << "**#{contents}**"
@@ -74,14 +79,16 @@ module Maildown
           result << "####{contents}\n"
         when 'hr'
           result << "****\n"
-        when 'br'
-          result << "\n"
         when 'img'
           result << "![#{node['alt']}](#{node['src']})"
         when 'a'
-          number = @links.count + 1
-          result << "#{contents}[#{number}]"
-          @links << "[#{number}] #{node['href']}"
+          if node['href'].start_with? 'mailto:' # skip mailto: links
+            result << "#{contents}"
+          else
+            number = @links.count + 1
+            result << "#{contents}[#{number}]"
+            @links << "[#{number}] #{node['href']}"
+          end
         else
           result << contents unless contents == nil
         end
