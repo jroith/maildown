@@ -76,11 +76,11 @@ module Maildown
         when 'strong'
           result << "**#{contents}**"
         when 'h1'
-          result << "##{contents}\n"
+          result << "## {contents} ##\n"
         when 'h2'
-          result << "###{contents}\n"
+          result << "### {contents} ###\n"
         when 'h3'
-          result << "####{contents}\n"
+          result << "#### {contents} ####\n"
         when 'hr'
           result << "****\n"
         when 'img'
