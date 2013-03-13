@@ -10,7 +10,7 @@ module Maildown
   class Parser
 
     def initialize html
-      @doc = Nokogiri::HTML(html.strip)
+      @doc = Nokogiri::HTML(html.gsub(/\n/, ''))
       @links = []
     end # initialize
 
@@ -23,13 +23,15 @@ module Maildown
       def parse
         @result = @doc.children.map { |ele| parse_element(ele) }.join
         @result = @result + "\n\n" + @links.join("\n") if @links.any?
-        @result.gsub! /\n{3,}/, "\n\n" # Removes lines breaks where there are more than two.
+        @result.gsub!(/\n{3,}/, "\n\n") # Removes lines breaks where there are more than two.
+        @result.strip!
+        @result.lstrip!
         return @result
       end
 
       def parse_element element
         if element.is_a? Nokogiri::XML::Text
-          return element.text.strip
+          return element.text.gsub(/^$\n/, '') # remove empty lines
         else
           if (children = element.children).count > 0
             return wrap_node(element, children.map {|element| parse_element(element)}.join )
@@ -64,9 +66,11 @@ module Maildown
         when 'li'
           result << "*#{contents}\n"
         when 'blockquote'
-          contents.split('\n').each do |part|
-            result << "> #{part}\n"
+          result << "\n"
+          contents.lines.each do |part|
+            result << "> #{part.strip}\n"
           end
+          result << "\n"
         when 'b'
           result << "**#{contents}**"
         when 'strong'
