@@ -86,7 +86,7 @@ module Maildown
         when 'img'
           result << "![#{node['alt']}](#{node['src']})"
         when 'a'
-          if node['href'] && node['href'].start_with? 'mailto:' # skip mailto: links
+          if node['href'] && node['href'].start_with?('mailto:') # skip mailto: links
             result << "#{contents}"
           else
             number = @links.count + 1
